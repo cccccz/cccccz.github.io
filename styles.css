@@ -1,0 +1,66 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    background-color: #dbdbd6; /* Matching the background color */
+  }
+  
+  .container {
+    width: 80%;
+    max-width: 960px;
+    margin: 0 auto;
+    margin-top: 15px;
+    background-color: #fff;
+    padding: 20px;
+    border:solid #94928e;
+    border-width: 1px;
+    border-radius: 7px;
+
+  }
+  
+  header {
+    border-bottom: 1px solid #ccc;
+    text-align: center;
+    padding-bottom: 20px;
+  }
+  
+  header h1 {
+    font-size: 24px; /* Adjusted to a common size for headers */
+    color: #000;
+  }
+
+  section h1 {
+    font-size: 24px; /* Slightly smaller than main header */
+    color: #000;
+    margin-top: 20px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  section h2 {
+    font-size: 20px; /* Slightly smaller than main header */
+    color: #000;
+    margin-top: 20px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  section ul, section ol {
+    font-size: 16px; /* Standard text size */
+    margin-top: 10px;
+  }
+  
+  #contact, #publications, #acknowledgments {
+    margin-top: 20px;
+  }
+
+  section p{
+    margin: 0 0;
+  }
+
+  .group {
+    margin-bottom:20px;
+  }
+  
+
+  /* Additional styles can be added as per the content */
+  
