@@ -180,7 +180,7 @@ h1 em, h2 em, h3 em, h4 em, h5 em, h6 em{
 }
 
 h1 {
-  font-size: 1.6em;
+  font-size: 1.4em;
   border-bottom: 1px solid #ddd;
 }
 
@@ -191,7 +191,7 @@ hr {
 }
 
 h2 {
-  font-size: 1.25em;
+  font-size: 1.2em;
   border-bottom: 1px solid #eee;
 }
 
