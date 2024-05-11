@@ -220,3 +220,30 @@ ul
     color: #50c1e4;
   }
 }
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+nav ul li {
+  float: left;
+}
+
+nav ul li a {
+  display: block;
+  color: rgb(0, 0, 0);
+  font-size: 20px;
+  text-align: center;
+  padding: 5px 5px;
+  text-decoration: none;
+}
+
+nav ul li a:hover {
+  background-color: #817575;
+  color:#9accdb
+}
+
