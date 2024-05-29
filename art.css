@@ -3,8 +3,12 @@ body, html {
     padding: 0;
     margin: 0;
     font-family: Arial, sans-serif;
+    background-image: url('images/background.png');
+    background-repeat: repeat-y; /* Allows the image to repeat vertically */
+    background-position: top; /* Aligns the image at the top */
+    background-size: 100% auto; /* Stretches the width to 100%, auto adjusts the height */
 }
-
+ 
 #page-container {
     display: flex;
     flex-direction: column;
@@ -164,4 +168,19 @@ nav ul li a:hover {
     margin: 0;
     font-size: 14px; /* Smaller font size for date */
     color: #666; /* Grey color for the date */
+}
+
+@media (max-width: 768px) {
+  .article {
+      flex-direction: column; /* Stack them on smaller screens */
+      align-items: flex-start;
+  }
+
+  .article-img {
+      margin-bottom: 10px; /* Space between the image and the info on small screens */
+  }
+
+  .article-info h3, .article-date {
+      text-align: left; /* Ensure text alignment is consistent */
+  }
 }
