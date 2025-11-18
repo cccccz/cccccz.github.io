@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Zheng Chen</title>
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+  <meta name="author" content="Zheng Chen"/>
+<link rel="stylesheet" href=style.css>
+<meta name="thumbnail" content="images/zheng-chen-thumb.jpg" />
+
+<link type="text/css" rel="stylesheet" href="index.css"/>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+</head>
+
+<body>
+  <nav>
+    <ul>
+        <li><a href="index.html">Home</a></li>
+    </ul>
+  </nav>
+
+  <div id="blog-content">
+    </div>
+  
+  <script id="markdown-source" type="text/markdown">
+# So... What is it about?
+
+**Date:** 2025-11-18 | **Tags:** #Movie #Life 
+
+_This is a test blog post.This blog post is written in **Markdown** format._
+
+## I failed my interviews
+
+I got 2 interviews and I failed both of them. Job titles were Client Performance Testing Engineer and Python Backend respectively.
+
+## Feedbacks from interviewers
+
+* **GPU/Rendering:** "I don't have a good understanding of modern GPU rendering pipelines and profilers."
+
+* **Python Backend/DSA:** "I need to improve basic data structures and algorithms knowledge because I couldn't answer questions related to how python implemented dictionaries and sets or how python solves hash collisions."
+
+## My plans
+---
+I plan to work on these problems because I know one can always improve if he still haven't given up.
+
+I am reading Fluent Python and reviewing data structures to understand how python works under the hood.
+
+I plan to learn using Nsight and other profilers to understand GPU rendering pipelines better.
+
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <script>
+    // 配置 marked.js 以使用 highlight.js
+    marked.setOptions({
+        highlight: (code, lang) => {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
+        },
+        langPrefix: 'hljs language-'
+    });
+
+    // 获取 Markdown 文本
+    const markdownText = document.getElementById('markdown-source').textContent;
+
+    // 渲染并注入 HTML
+    document.getElementById('blog-content').innerHTML = marked.parse(markdownText);
+  </script>
+
+  <a href="blog.html">back</a>
+</body>
+</html>
