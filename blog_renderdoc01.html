@@ -24,7 +24,7 @@
     </div>
   
   <script id="markdown-source" type="text/markdown">
-# "The Reverse-Z Depth Buffer Technique"
+# My Great Adventure with RenderDoc
 
 **Date:** 2025-11-20 | **Tags:** #ComputerGraphics #ComputerScience 
 
@@ -34,10 +34,18 @@ _this space is left blank for future content._
 
 ## What is MiniEngine?
 
+MiniEngine is a sample graphics engine provided by Microsoft that demonstrates modern DirectX 12 rendering techniques, and I find it perfect for me to learn graphics programming and experiment with RenderDoc.
+
 _this space is left blank for future content._
 https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/MiniEngine
 
-## What problem does Reverse-Z solve?
+### MiniEngine's graphics pipeline(DX12)
+
+## Discovery 1: Reverse-Z
+
+I was having fun poking around with RenderDoc in a captured frame from MiniEngine. In Z-prepass section...
+
+### What problem does Reverse-Z solve?
 
 a straight forward demonstration on youtube, Normal Z vs Reverse Z
 https://www.youtube.com/watch?v=s2XdH3fYUac
@@ -47,10 +55,24 @@ https://www.youtube.com/watch?v=s2XdH3fYUac
 _this space is left blank for future content._
 https://www.youtube.com/watch?v=yhwg_O5HBwQ
 
-## Why does Reverse-Z work better? The mathematics behind it.
+### Why does Reverse-Z work better? The mathematics behind it.
 
+computerphile explains floating point numbers: https://www.youtube.com/watch?v=PZRI1IfStY0
 _this space is left blank for future content._
 the range of z axis is from 0.0 to 1.0 in computer graphics and the distribution of depth values is not linear.
+
+## Discovery 2: Forward+ Architecture
+
+### What is Forward+?
+
+### How does Forward+ deal with many lights?
+
+### Shader Code that utilizes Forward+ light culling
+_Note: you need to compile in DEBUG mode to see these shader codes in RenderDoc._
+
+
+As I'm writing this, yes I failed another interview about python backend. It was a complete disaster. Well the good part is that I did manage to nail the coding part, but the questions about Redis data strutures and paging in operating systems came out of nowhere and I was not prepared.
+Again, this make me realize how much I need to grind in order to pass these interviews. Well, just put my head down and keep going.
 
 
   </script>
