@@ -54,7 +54,6 @@ I plan to learn using Nsight and other profilers to understand GPU rendering pip
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <script>
-    // 配置 marked.js 以使用 highlight.js
     marked.setOptions({
         highlight: (code, lang) => {
             const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -63,10 +62,8 @@ I plan to learn using Nsight and other profilers to understand GPU rendering pip
         langPrefix: 'hljs language-'
     });
 
-    // 获取 Markdown 文本
     const markdownText = document.getElementById('markdown-source').textContent;
 
-    // 渲染并注入 HTML
     document.getElementById('blog-content').innerHTML = marked.parse(markdownText);
   </script>
 

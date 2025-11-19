@@ -35,10 +35,23 @@ _this space is left blank for future content._
 ## What is MiniEngine?
 
 _this space is left blank for future content._
+https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/MiniEngine
 
 ## What problem does Reverse-Z solve?
 
+a straight forward demonstration on youtube, Normal Z vs Reverse Z
+https://www.youtube.com/watch?v=s2XdH3fYUac
+
+### what is Z-Buffer?
+
 _this space is left blank for future content._
+https://www.youtube.com/watch?v=yhwg_O5HBwQ
+
+## Why does Reverse-Z work better? The mathematics behind it.
+
+_this space is left blank for future content._
+the range of z axis is from 0.0 to 1.0 in computer graphics and the distribution of depth values is not linear.
+
 
   </script>
 
@@ -46,7 +59,6 @@ _this space is left blank for future content._
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <script>
-    // 配置 marked.js 以使用 highlight.js
     marked.setOptions({
         highlight: (code, lang) => {
             const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -55,10 +67,8 @@ _this space is left blank for future content._
         langPrefix: 'hljs language-'
     });
 
-    // 获取 Markdown 文本
     const markdownText = document.getElementById('markdown-source').textContent;
 
-    // 渲染并注入 HTML
     document.getElementById('blog-content').innerHTML = marked.parse(markdownText);
   </script>
 
