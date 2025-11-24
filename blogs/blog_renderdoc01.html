@@ -41,6 +41,9 @@ https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/MiniEngine
 
 ### MiniEngine's graphics pipeline(DX12)
 
+
+### Z-prepass
+
 ## Discovery 1: Reverse-Z
 
 I was having fun poking around with RenderDoc in a captured frame from MiniEngine. In Z-prepass section...
@@ -65,11 +68,65 @@ the range of z axis is from 0.0 to 1.0 in computer graphics and the distribution
 
 ### What is Forward+?
 
-### How does Forward+ deal with many lights?
+"Forward + is a rendering technique that combines traditional forward rendering with a "tiled" light culling pass, which efficiently handle scenes with many dynamics lights"
 
+### Wait what is Culling?
+
+### How does Forward+ deal with many lights?
+1. Z-Prepass: Reduce Overdraw and provide Min/Max Depth range for Light Culling
+as before
+
+2. Light Culling: Construct Frustum and determine the list of affecting lights for each tile
+
+3. Light Loop: Inside Pixel Shader, utilizing Wave Intrinsics to share affecting lights among pixels in the same wave/ Scalarization
+
+4. write to memory
 ### Shader Code that utilizes Forward+ light culling
 _Note: you need to compile in DEBUG mode to see these shader codes in RenderDoc._
 
+### From SM 5.0 to SM 6.0:  Wave Intrinsics
+
+
+For old graphics cards:
+```
+uint tileLightCount = lightGrid.Load(tileOffset + 0);
+uint tileLightCountSphere = (tileLightCount >> 0) & 0xff;
+
+// 2. Iterate over point lights
+for (n = 0; n < tileLightCountSphere; n++, tileLightLoadOffset += 4)
+{
+    // 3. Table lookup: Retrieve the Light ID
+    uint lightIndex = lightGrid.Load(tileLightLoadOffset);
+    // 4. Data fetch: Retrieve light parameters
+    LightData lightData = lightBuffer[lightIndex];
+    // 5. Calculate lighting contribution
+    colorSum += ApplyPointLight(POINT_LIGHT_ARGS);
+}
+```
+
+For new graphics cards supporting Wave Intrinsics:
+
+```
+// Since all threads are in the same Tile and might be reading the same light list,
+// we shouldn't let every thread access VRAM individually (that's slow).
+// Instead, we combine the Light IDs needed by everyone using an OR operation and read them in one go!
+uint groupBits = WaveOr(GetGroupBits(groupIndex, tileIndex, lightBitMaskGroups));
+
+while (groupBits != 0) // As long as any thread in this Wave still needs to process a light
+{
+    // Extract the Light ID from the lowest set bit
+    uint bitIndex = PullNextBit(groupBits); 
+    uint lightIndex = 32 * groupIndex + bitIndex;
+    
+    // ... Calculate lighting ...
+}
+```
+
+VGPR: Vector General Purpose Register, each thread has its own.
+
+SGPR: Scalar General Purpose Register, shared among all threads in a wave.
+
+so wave intrinsics reduce memory transactions, reduce  register pressure and boost instruction pipeleine efficiency by scalarization(using SGPRs).
 
 As I'm writing this, yes I failed another interview about python backend. It was a complete disaster. Well the good part is that I did manage to nail the coding part, but the questions about Redis data strutures and paging in operating systems came out of nowhere and I was not prepared.
 Again, this make me realize I need to grind harder. Keep going.
