@@ -16,7 +16,7 @@
 <body>
   <nav>
     <ul>
-        <li><a href="index.html">Home</a></li>
+        <li><a href="../index.html">Home</a></li>
     </ul>
   </nav>
 
@@ -30,51 +30,22 @@
 
 ##  Contents
 
-* [Introduction: Why deferred rendering?](#why-deferred-rendering)
-* [Core: How does deferred rendering work?](#how-deferred-rendering-works)
-* [Advantages and Challenges](#advantages-and-challenges)
-* [Modern Variants and Optimizations](#modern-variants-and-optimizations)
+* [Introduction: Why forward rendering?](#why-forward-rendering)
+* [Core: How does forward rendering work?](#how-forward-rendering-works)
+* [Limitations](#limitations)
+* [Avantages over Deferred](#advantages-over-deferred)
+* [Evolution: Forward+ and Clustered Rendering](#evolution-forward-and-clustered-rendering)
 
-## Why deferred rendering?
+## Why forward rendering?
 
-Consider the following two oversimplified ways to render a 3D scene:
-
-First:
-
+Forward rendering is traditional and straightforward.
+Consider the following oversimplified way to render a 3D scene:
 ```
 for object in objects:
     for light in lights:
         draw(mesh, light)
 ```
 
-Second:
-
-```
-for object in objects:
-    draw_to_bufferA(object)
-
-for light in lights:
-    draw_to_bufferB(light)
-
-draw(bufferA, bufferB)
-
-```
-The first approach is called forward rendering, while the second is deferred rendering. In real applications, the GPU is dealing with "triangles" instead of "objects," but we use this simplified loop structure to illustrate the algorithmic difference.
-
-It is easy to see that the first algorithm has a time complexity of $O(m \times n)$, where $m$ is the number of objects and $n$ is the number of lights, while the second algorithm has a time complexity of $O(m+n)$. So, for algorithm efficiency, deferred rendering is significantly better when there are many lights in the scene.
-
-Also, in forward rendering, there may be pixels that are drawn multiple times due to overlapping objects, leading to wasted computation on shading. This issue is often called "overdraw". Deferred rendering avoids overdraw on the lighting step by deferring the lighting calculations until it has a fair understanding of the geometry in the scene.
-
-
-## Core: How does deferred rendering works?
-
-A complete deferred rendering pipeline looks like this:
-
-Deferred rendering is a two-pass pipeline, designed to decouple geometry processing from lighting calculation.
-
-The main steps are:
-1. **Geometry Pass**: In this pass, the scene's geometry information is calculated and stored in Gbuffers(guess what "G" stands for). These buffers typically include position, normal, albedo(color), and specular information for each pixel.
-2. **Lighting Pass**: In this pass, the lighting calculations are performed using the data from the Gbuffers. Each light source is processed, and its contribution to the final pixel color is computed based on the stored geometry information.
 
 ---
 
@@ -97,7 +68,7 @@ The main steps are:
     document.getElementById('blog-content').innerHTML = marked.parse(markdownText);
   </script>
 
-  <a href="blog.html">back</a>
+  <a href="../blog.html">back</a>
 </body>
 </html>
 
