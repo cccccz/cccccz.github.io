@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Zheng Chen</title>
-  <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-  <meta name="author" content="Zheng Chen"/>
-<link rel="stylesheet" href=style.css>
+  <title>Modern Deferred Shading with Render Passes</title>
+  <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<link type="text/css" rel="stylesheet" href="blog.css"/>
 <meta name="thumbnail" content="images/zheng-chen-thumb.jpg" />
 
-<link type="text/css" rel="stylesheet" href="blog.css"/>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  
 </head>
 
 <body>
   <nav>
     <ul>
-        <li><a href="index.html">Home</a></li>
+        <li><a href="../index.html">Home</a></li>
     </ul>
   </nav>
 
@@ -24,61 +25,227 @@
     </div>
   
   <script id="markdown-source" type="text/markdown">
-# Introduction to Deferred Rendering
+# Modern Deferred Shading with Render Passes
+**Date:** 2025-11-30 | **Tags:** #ComputerGraphics #DiligentEngine
 
-**Date:** 2025-11-25 | **Tags:** #ComputerGraphics
+Based on **Diligent Engine Tutorial 19**, this post explores how modern graphics engines handle Deferred Rendering using **Render Passes** and **Subpasses** to optimize performance and memory bandwidth.
 
-##  Contents
+![Fully Rendered](../images/modern_deferred/rendered.png)
+<div class="img-caption">Fig 0. The Final Result(10000 dynamic light sources)</div>
 
-* [Introduction: Why deferred rendering?](#why-deferred-rendering)
-* [Core: How does deferred rendering work?](#how-deferred-rendering-works)
-* [Advantages and Challenges](#advantages-and-challenges)
-* [Modern Variants and Optimizations](#modern-variants-and-optimizations)
+## Contents
 
-## Why deferred rendering?
-
-Consider the following two oversimplified ways to render a 3D scene:
-
-First:
-
-```
-for object in objects:
-    for light in lights:
-        draw(mesh, light)
-```
-
-Second:
-
-```
-for object in objects:
-    draw_to_bufferA(object)
-
-for light in lights:
-    draw_to_bufferB(light)
-
-draw(bufferA, bufferB)
-
-```
-The first approach is called forward rendering, while the second is deferred rendering. In real applications, the GPU is dealing with "triangles" instead of "objects," but we use this simplified loop structure to illustrate the algorithmic difference.
-
-It is easy to see that the first algorithm has a time complexity of $O(m \times n)$, where $m$ is the number of objects and $n$ is the number of lights, while the second algorithm has a time complexity of $O(m+n)$. So, for algorithm efficiency, deferred rendering is significantly better when there are many lights in the scene.
-
-Also, in forward rendering, there may be pixels that are drawn multiple times due to overlapping objects, leading to wasted computation on shading. This issue is often called "overdraw". Deferred rendering avoids overdraw on the lighting step by deferring the lighting calculations until it has a fair understanding of the geometry in the scene.
-
-
-## Core: How does deferred rendering works?
-
-A complete deferred rendering pipeline looks like this:
-
-Deferred rendering is a two-pass pipeline, designed to decouple geometry processing from lighting calculation.
-
-The main steps are:
-1. **Geometry Pass**: In this pass, the scene's geometry information is calculated and stored in Gbuffers(guess what "G" stands for). These buffers typically include position, normal, albedo(color), and specular information for each pixel.
-2. **Lighting Pass**: In this pass, the lighting calculations are performed using the data from the Gbuffers. Each light source is processed, and its contribution to the final pixel color is computed based on the stored geometry information.
+* [The Motivation & Definition](#the-motivation--definition)
+* [The Architecture: Render Passes & Subpasses](#the-architecture-render-passes--subpasses)
+* [Step 1: The Geometry Pass](#step-1-the-geometry-pass)
+* [Step 2: The Lighting Pass (Light Volumes)](#step-2-the-lighting-pass-light-volumes)
+* [Optimization: Why Subpasses?](#optimization-why-subpasses)
+* [Cross-Platform Philosophies: Diligent vs. UE5](#cross-platform-philosophies-diligent-vs-ue5)
 
 ---
 
+## The Motivation & Definition
+
+**What is Deferred Rendering?**
+
+Deferred Rendering is a shading technique where lighting calculations are not performed immediately when an object is drawn. Instead, we "defer" (postpone) the lighting until all geometry has been rasterized and we know exactly which surface is visible at every pixel.
+
+This is primarily done to solve the $O(M \times N)$ complexity problem of Forward Rendering (where M is objects and N is lights).
+
+**Forward Rendering:**
+```cpp
+// Complexity: O(M * N)
+// We calculate lighting for every object, even if it's hidden behind another!
+for object in objects:
+    for light in lights:
+        framebuffer += lighting(object, light)
+```
+
+**Deferred Rendering:**
+```cpp
+// Complexity: O(M + N)
+// Pass 1: Write surface properties (Position, Normal, Color) to G-Buffer
+for object in objects:
+    write_to_gbuffer(object)
+
+// Pass 2: Calculate lighting only for visible pixels
+for light in lights:
+    framebuffer += lighting(read_from_gbuffer(pixel), light)
+```
+
+However, traditional Deferred Rendering (rendering to textures, then reading textures) incurs a heavy **Memory Bandwidth** cost. We write huge G-Buffers to VRAM, then immediately read them back. Modern Engine Architectures solve this with **Subpasses**.
+
+---
+
+## The Architecture: Render Passes & Subpasses
+
+In `Tutorial19_RenderPasses.cpp`, we don't just switch Render Targets manually; we define a single `RenderPass` object with a dependency graph.
+
+### The Render Pass Definition
+We define **4 Attachments** and **2 Subpasses**:
+
+1.  **Subpass 0 (Geometry):** Writes to Color (Albedo) and DepthZ (Linear Depth).
+2.  **Subpass 1 (Lighting):** Reads Color and DepthZ as *Input Attachments* to compute the final image.
+
+```cpp
+// C++: Tutorial19_RenderPasses::CreateRenderPass()
+
+// Subpass 0: Geometry Pass
+// Writes to Render Targets 0 and 1
+AttachmentReference RTAttachmentRefs0[] =
+{
+    {0, RESOURCE_STATE_RENDER_TARGET}, // Color G-Buffer
+    {1, RESOURCE_STATE_RENDER_TARGET}  // DepthZ G-Buffer
+};
+
+// Subpass 1: Lighting Pass
+// Writes to Render Target 3 (Swap Chain / Final Color)
+// READS from Attachments 0 and 1 (Input Attachments)
+AttachmentReference InputAttachmentRefs1[] =
+{
+    {0, RESOURCE_STATE_INPUT_ATTACHMENT},
+    {1, RESOURCE_STATE_INPUT_ATTACHMENT}
+};
+
+// Define Dependency: Ensure Subpass 0 finishes writing before Subpass 1 starts reading
+SubpassDependencyDesc Dependencies[1];
+Dependencies[0].SrcSubpass    = 0;
+Dependencies[0].DstSubpass    = 1;
+Dependencies[0].SrcStageMask  = PIPELINE_STAGE_FLAG_RENDER_TARGET;
+Dependencies[0].DstStageMask  = PIPELINE_STAGE_FLAG_PIXEL_SHADER;
+```
+
+---
+
+## Step 1: The Geometry Pass
+
+In the first subpass, we render the scene geometry (textured cubes). We use **Multiple Render Targets (MRT)** to store albedo and linear depth.
+
+### Visualizing the G-Buffer
+Below represents the raw data we capture during the first subpass. Note that the "Albedo" is just the unlit texture color, and "Linear Depth" represents the distance from the camera.
+
+![G-Buffer Albedo](../images/modern_deferred/render_target_0.png)
+<div class="img-caption">Fig 1. The Albedo (Color) G-Buffer Target</div>
+
+![G-Buffer Depth](../images/modern_deferred/depth_z_buffer.png)
+<div class="img-caption">Fig 2. The Linear Depth G-Buffer Target (Auto-fitted range)</div>
+
+**Pixel Shader (`cube.psh`):**
+```hlsl
+struct PSOutput
+{
+    float4 Color  : SV_TARGET0; // G-Buffer Color
+    float  DepthZ : SV_TARGET1; // G-Buffer Linear Depth
+};
+
+void main(in  PSInput  PSIn,
+          out PSOutput PSOut)
+{
+    // Write Texture Color
+    PSOut.Color  = g_Texture.Sample(g_Texture_sampler, PSIn.UV); 
+    
+    // Write Normalized Linear Depth
+    PSOut.DepthZ = DepthToNormalizedDeviceZ(PSIn.Pos.z);
+}
+```
+
+---
+
+## Step 2: The Lighting Pass (Light Volumes)
+
+In the second subpass, we apply lighting. Instead of drawing a full-screen quad (which processes empty space), we draw **Light Volumes** representing the range of each point light. 
+
+*Note: In this specific tutorial, we use simple **Cubes** to approximate the light volume for simplicity, though spheres are also common.*
+
+![Light Volume Mesh](../images/modern_deferred/light_volumes.png)
+<div class="img-caption">Fig 3. The Light Volume Geometry (Cube Wireframe) in RenderDoc Mesh Viewer</div>
+
+**Pixel Shader (`light_volume_hlsl.psh`):**
+Crucially, we read from `g_SubpassInputColor`, which corresponds to the data written in the previous subpass at the *exact same pixel location*.
+
+```hlsl
+// Input Attachments (not standard textures)
+Texture2D<float4> g_SubpassInputColor;
+Texture2D<float4> g_SubpassInputDepthZ;
+
+void main(in  PSInput  PSIn,
+          out PSOutput PSOut)
+{
+    // 1. Load G-Buffer Data directly from the current pixel
+    // Note: No UV coordinates needed, just pixel position
+    float Depth = g_SubpassInputDepthZ.Load(int3(PSIn.Pos.xy, 0)).x;
+    
+    // 2. Reconstruct World Position
+    float4 ClipSpacePos = float4(PSIn.Pos.xy * g_Constants.ViewportSize.zw * float2(2.0, -2.0) + float2(-1.0, 1.0), Depth, 1.0);
+    float4 WorldPos = mul(ClipSpacePos, g_Constants.ViewProjInv);
+    WorldPos.xyz /= WorldPos.w;
+
+    // 3. Calculate Light Attenuation
+    float DistToLight = length(WorldPos.xyz - PSIn.LightLocation.xyz);
+    float Attenuation = clamp(1.0 - DistToLight/PSIn.LightLocation.w, 0.0, 1.0);
+    
+    // Optimize: Discard pixels outside light influence
+    if (Attenuation == 0.0 && g_Constants.ShowLightVolumes == 0) discard;
+
+    // 4. Load Albedo Color from G-Buffer
+    float3 Color = g_SubpassInputColor.Load(int3(PSIn.Pos.xy, 0)).rgb;
+    
+    // 5. Final Calculation
+    PSOut.Color.rgb = Color.rgb * PSIn.LightColor.rgb * Attenuation;
+    PSOut.Color.a = 1.0;
+}
+```
+
+![Fully Rendered](../images/modern_deferred/rendered.png)
+<div class="img-caption">Fig 4. The Final Result(lights applied)</div>
+
+---
+
+## Optimization: Why Subpasses?
+
+You might ask: *Why go through the trouble of defining Subpasses instead of just using standard Textures?*
+
+The answer is **Tile-Based Rendering Architectures**. On many modern GPUs, the screen is split into small tiles. By using Subpasses, we tell the driver that the G-Buffer data created in Pass 1 will be immediately consumed in Pass 2 at the same pixel location.
+
+We can verify this in **RenderDoc**. Notice in the Pipeline State below, the resources are bound as **Input Attachments**, not standard Shader Resources.
+
+![Pipeline State](../images/modern_deferred/input_attachment.png)
+<div class="img-caption">Fig 5. RenderDoc showing the Input Attachments bound to the Pixel Shader</div>
+
+In `Tut19.cpp`, we enable this optimization with the `MEMORYLESS` flag:
+
+```cpp
+// If supported, use MEMORYLESS to keep data on-chip!
+TexDesc.MiscFlags = MISC_TEXTURE_FLAG_MEMORYLESS;
+```
+
+This drastically reduces bandwidth usage. While this technique is most famous for powering mobile graphics, it provides a structured, high-performance architecture that scales across all modern platforms, including desktop.
+
+---
+
+## Cross-Platform Philosophies: Diligent vs. UE5
+
+How do engines implement this complex logic across different APIs (DX12, Vulkan, Metal) seamlessly?
+
+### Diligent Engine: Explicit Abstraction
+Diligent Engine adopts a **"Vulkan-first"** design philosophy. It exposes an explicit `RenderPass` and `Framebuffer` API that mirrors the strict requirements of Vulkan.
+* **On Vulkan/Metal:** These map 1:1 to native objects, ensuring zero overhead and full utilization of on-chip memory (Tile-Based Rendering).
+* **On DX12:** It smartly maps these explicit descriptions to the modern `BeginRenderPass` API (introduced in Windows 10 1809) or falls back to traditional resource barriers on older systems.
+By forcing the developer to define the structure upfront, the engine guarantees that the data flow is valid for mobile architectures while running efficiently on desktop.
+
+### Unreal Engine 5: Render Dependency Graph (RDG)
+UE5 takes a higher-level approach. Instead of manually creating `RenderPass` objects, graphics programmers use the **Render Dependency Graph (RDG)**. Developers simply declare their inputs and outputs in C++ (e.g., `GraphBuilder.AddPass(...)`).
+
+The RDG then acts as a compiler for the frame:
+1.  **Analysis:** It analyzes the topology of the entire frame.
+2.  **Merging:** If it detects that a texture is written and then immediately read at the same pixel location (Pixel-Local Storage), it **automatically merges** these logical passes into a single native Render Pass with Subpasses.
+3.  **Execution:** On mobile, this results in the same on-chip optimization we see in Diligent, but without the developer explicitly writing subpass descriptions.
+
+**Conclusion**
+
+Whether through explicit definition (Diligent) or automatic graph analysis (UE5), modern rendering architectures have converged on one truth: knowing your **data dependencies** upfront is the key to unlocking performance on today's diverse hardware.
   </script>
+
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -97,7 +264,7 @@ The main steps are:
     document.getElementById('blog-content').innerHTML = marked.parse(markdownText);
   </script>
 
-  <a href="blog.html">back</a>
+  <a href="../blog.html">back</a>
 </body>
 </html>
 
